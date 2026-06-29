@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>NikoAI — Edge Agentic Engine</title>
+  <link rel="stylesheet" href="styles/main.css?v=3">
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.4/dist/dexie.min.js"></script>
+  <!-- Markdown 渲染 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- 代码高亮 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+</head>
+<body>
+  <!-- 导航区：四大 Tab + 底部工作区入口 -->
+  <nav id="nav-tabs">
+    <div class="nav-tabs-top">
+      <button class="tab-btn active" data-panel="providers">🔌 算力接入</button>
+      <button class="tab-btn" data-panel="agents">🤖 角色定义</button>
+      <button class="tab-btn" data-panel="tools">🛠️ 武器工坊</button>
+      <button class="tab-btn" data-panel="workflows">⎔ 工作流编排</button>
+    </div>
+    <div class="nav-tabs-bottom">
+      <button id="btn-open-workspace" class="tab-btn workspace-btn">📁 打开工作区</button>
+    </div>
+  </nav>
+
+  <!-- 配置面板区 -->
+  <section id="panel-providers" class="config-panel active">
+    <h2 style="margin-top: 0; color: #fff;">注册算力服务商</h2>
+    <!-- 绝对干净的表单，没有任何乱七八糟的按钮 -->
+    <form id="form-provider" style="display: flex; flex-direction: column; gap: 15px;">
+      <div>
+        <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 0.9rem;">服务商名称</label>
+        <input type="text" name="name" placeholder="例如: 深度求索 DeepSeek" required style="width: 100%; box-sizing: border-box; padding: 10px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 6px;">
+      </div>
+    
+      <div>
+        <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 0.9rem;">API 网址 (Base URL)</label>
+        <input type="url" name="url" placeholder="例如: https://api.deepseek.com/v1" required style="width: 100%; box-sizing: border-box; padding: 10px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 6px;">
+      </div>
+    
+      <div>
+        <label style="display: block; margin-bottom: 5px; color: #ccc; font-size: 0.9rem;">API 密钥 (API Key)</label>
+        <input type="password" name="apiKey" placeholder="sk-..." required style="width: 100%; box-sizing: border-box; padding: 10px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 6px;">
+      </div>
+    
+      <button type="submit" id="btn-save-provider" style="margin-top: 5px; padding: 12px; background: #4da6ff; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: background 0.2s;">
+        验证并保存算力
+      </button>
+    </form>
+
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 25px 0;">
+
+    <!-- 下方干净的列表容器 -->
+    <div id="list-providers" style="display: flex; flex-direction: column; gap: 12px;">
+      <div style="color: #666; font-size: 0.9rem;">暂无已注册算力</div>
+    </div>
+  </section>
+
+  <section id="panel-agents" class="config-panel">
+    <h2 style="margin-top: 0;">创建 AI 特工</h2>
+    <!-- 干净的表单，绝对没有多余的按钮 -->
+    <form id="form-agent" style="display: flex; flex-direction: column; gap: 10px;">
+      <input type="text" name="name" placeholder="特工名称 (如: 代码助手)" required style="padding: 8px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+  
+      <div style="display: flex; gap: 10px;">
+        <select name="providerId" id="agent-provider-select" required style="flex: 1; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+          <option value="">--选择算力服务商--</option>
+        </select>
+        <select name="model" id="agent-model-select" required style="flex: 1; padding: 8px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+          <option value="">--选择模型--</option>
+        </select>
+      </div>
+  
+      <textarea name="prompt" rows="4" placeholder="系统提示词 (System Prompt)" style="padding: 8px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 4px; resize: vertical;"></textarea>
+
+      <!-- ─── 沙盒工作区挂载（用户自定义） ──────── -->
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" name="workspace" id="agent-workspace-input" value=".workspace" placeholder="工作区路径（如：.workspace 或 D:/my_agent_space）" style="flex:1;padding:8px;background:var(--bg-dark);border:1px solid var(--border-color);color:#fff;border-radius:4px;font-family:var(--font-mono,monospace);font-size:0.82rem;">
+        <button id="btn-open-ws-from-agent" type="button" style="padding:8px 14px;background:transparent;border:1px solid #1e3a5f;color:#4da6ff;border-radius:4px;cursor:pointer;font-size:0.8rem;white-space:nowrap;">📂 打开</button>
+      </div>
+      <div id="workspace-mount-status" style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.75rem;">
+        <span id="ws-indicator" style="width:6px;height:6px;border-radius:50%;background:#555;flex-shrink:0;"></span>
+        <span id="ws-path" style="color:#888;font-family:var(--font-mono,monospace);">检测中...</span>
+      </div>
+  
+      <div id="agent-tools-checkboxes" style="display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.85rem;">
+        <!-- 动态复选框会渲染在这里 -->
+      </div>
+  
+      <button type="submit" style="padding: 10px; background: var(--accent); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+        保存特工
+      </button>
+    </form>
+
+    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;">
+
+    <!-- 下方的列表容器 -->
+    <div id="list-agents" style="display: flex; flex-direction: column; gap: 10px;">
+      暂无已注册特工
+    </div>
+  </section>
+
+  <section id="panel-workflows" class="config-panel">
+    <form id="form-workflow">
+      <h3>录入 SOP 图纸</h3>
+      <input type="text" name="name" placeholder="工作流名称（如：代码审查流水线）" required>
+      <textarea name="steps" placeholder='步骤 JSON 数组，例如：
+[
+  {"type":"llm","prompt":"请审查以下代码：{{userInput}}","providerId":"...","model":"..."},
+  {"type":"tool","toolId":"local_commander","params":{"instruction":"echo {{artifacts.step_0}}"}}
+]' rows="8" style="font-family:var(--font-mono,monospace);font-size:13px;" required></textarea>
+      <button type="submit">保存工作流</button>
+    </form>
+    <div id="list-workflows"></div>
+  </section>
+
+  <section id="panel-tools" class="config-panel">
+    <form id="form-tool">
+      <h3 style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        <span style="font-size:1.2rem;">🔏</span> 神圣锻造
+      </h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <input type="text" name="uid" placeholder="武器 UID（如：core.web_reader）" required style="font-family:var(--font-mono,monospace);">
+        <input type="text" name="name" placeholder="武器名称（如：深度网页阅读器）" required>
+        <input type="text" name="author" placeholder="作者（如：Niko_Admin）" required style="font-family:var(--font-mono,monospace);">
+        <input type="text" name="version" placeholder="版本（如：1.0.0）" required style="font-family:var(--font-mono,monospace);">
+      </div>
+      <textarea name="description" placeholder="武器简介（LLM 理解用）" rows="2" required></textarea>
+      <textarea name="configJson" placeholder='JSON 配置，包含 parameters 和 execution，例如：
+{
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "目标网页 URL"
+      }
+    },
+    "required": ["url"]
+  },
+  "execution": {
+    "type": "go_bridge",
+    "endpoint": "/api/tools/read_web"
+  }
+}' rows="10" style="font-family:var(--font-mono,monospace);font-size:13px;" required></textarea>
+      <button type="submit">✍️ 签发并存入库</button>
+    </form>
+    <div id="list-tools"></div>
+  </section>
+
+  <!-- 主视口 -->
+  <main id="main-viewport">
+    <!-- 模式切换器 -->
+    <div id="mode-switcher">
+      <button class="mode-btn active" data-mode="terminal">>_ 终端</button>
+      <button class="mode-btn" data-mode="pipeline">⎔ 流水线</button>
+    </div>
+    <!-- 主屏幕内容区 -->
+    <div id="viewport-content">
+      <!-- 终端 UI -->
+      <div id="terminal-container">
+        <div id="terminal-topbar">
+          <select id="chat-agent-selector">
+            <option value="">-- 请选择出战特工 --</option>
+          </select>
+        </div>
+        <div id="chat-log"></div>
+        <div id="chat-input-area">
+          <textarea id="chat-input" placeholder="输入指令 (Enter 发送)..." rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="./scripts/main.js?v=20260629f"></script>
+</body>
+</html>

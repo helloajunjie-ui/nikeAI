@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head><title>清除 IndexedDB</title></head>
+<body>
+<h1>正在清除 IndexedDB 数据库...</h1>
+<script>
+(async () => {
+  try {
+    // 删除旧数据库 NikoAI
+    await new Promise((resolve, reject) => {
+      const req = indexedDB.deleteDatabase('NikoAI');
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => console.log('NikoAI blocked');
+    });
+    console.log('✅ NikoAI 已删除');
+    
+    // 删除新数据库 NikoDB_Pro
+    await new Promise((resolve, reject) => {
+      const req = indexedDB.deleteDatabase('NikoDB_Pro');
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => console.log('NikoDB_Pro blocked');
+    });
+    console.log('✅ NikoDB_Pro 已删除');
+    
+    document.body.innerHTML = '<h1 style="color:green;">✅ 所有 IndexedDB 数据库已清除</h1><p>请关闭此页面，然后刷新 NikoAI 主页面。</p>';
+  } catch (err) {
+    document.body.innerHTML = '<h1 style="color:red;">❌ 清除失败: ' + err.message + '</h1>';
+  }
+})();
+</script>
+</body>
+</html>
